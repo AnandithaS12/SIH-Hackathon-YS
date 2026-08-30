@@ -34,6 +34,46 @@ OCCUPATIONS = [
 
 SOCIAL_CATEGORIES = ["General", "OBC", "SC", "ST", "EWS"]
 
+# Indicative annual value used to summarise a citizen's total entitlement. Keyed by
+# the amount as written in each scheme's max_financial_benefit string.
+# ORDER IS SIGNIFICANT — first match wins, mirroring the original if/elif chain
+# (e.g. "₹78,000 Capital Subsidy + ₹15,000/yr Savings" resolves to 15,000).
+BENEFIT_VALUE_HINTS = (
+    ("6,000", 6000),
+    ("15,000", 15000),
+    ("24,000", 24000),
+    ("25,000", 25000),
+    ("50,000", 50000),
+    ("5,00,000", 500000),
+    ("78,000", 78000),
+)
+LAKH = 100000
+
+
+def _estimated_benefit_value(max_financial_benefit: Optional[str]) -> int:
+    """Best-effort annual rupee value for one eligible scheme."""
+    text = max_financial_benefit or ""
+    for needle, value in BENEFIT_VALUE_HINTS:
+        if needle in text:
+            return value
+    return 0
+
+
+def _format_total_benefit(total: int) -> str:
+    if total >= LAKH:
+        return f"₹{total / LAKH:.1f} Lakhs+"
+    if total > 0:
+        return f"₹{total:,}"
+    return "₹10,000+"
+
+
+def _build_profile(input_data: QuestionnaireRequest) -> CitizenProfile:
+    """Drop None-valued optionals so CitizenProfile's own defaults apply
+    (owned_documents is Optional on the request but a required list on the profile)."""
+    return CitizenProfile(
+        **{k: v for k, v in input_data.model_dump().items() if v is not None}
+    )
+
 @router.get("/metadata")
 async def get_metadata():
     return {
@@ -52,57 +92,30 @@ async def get_metadata():
 
 @router.post("/evaluate", response_model=CitizenEvaluationResponse)
 async def evaluate_citizen(input_data: QuestionnaireRequest):
-    # 1. Build profile — drop None-valued optionals so CitizenProfile's own defaults apply
-    #    (owned_documents is Optional on the request but a required list on the profile).
-    profile_dict = {
-        k: v for k, v in input_data.model_dump().items() if v is not None
-    }
-    profile = CitizenProfile(**profile_dict)
-    
-    # 2. Determine persona
+    profile = _build_profile(input_data)
     persona = determine_persona(profile)
-    
-    # 3. Fetch all schemes from DB
-    schemes_cursor = db.schemes.find({})
-    schemes_docs = await schemes_cursor.to_list(1000)
-    
+
+    schemes_docs = await db.schemes.find({}).to_list(1000)
+
     eligibility_map: Dict[str, Any] = {}
     eligible_count = 0
     partially_eligible_count = 0
     estimated_benefit_sum = 0
-    
+
     for s_doc in schemes_docs:
         s_doc.pop("_id", None)
         scheme_obj = Scheme(**s_doc)
         result = evaluate_scheme_eligibility(scheme_obj, profile)
         eligibility_map[scheme_obj.id] = result
-        
+
         if result.status == "ELIGIBLE":
             eligible_count += 1
-            if "6,000" in (scheme_obj.max_financial_benefit or ""):
-                estimated_benefit_sum += 6000
-            elif "15,000" in (scheme_obj.max_financial_benefit or ""):
-                estimated_benefit_sum += 15000
-            elif "24,000" in (scheme_obj.max_financial_benefit or ""):
-                estimated_benefit_sum += 24000
-            elif "25,000" in (scheme_obj.max_financial_benefit or ""):
-                estimated_benefit_sum += 25000
-            elif "50,000" in (scheme_obj.max_financial_benefit or ""):
-                estimated_benefit_sum += 50000
-            elif "5,00,000" in (scheme_obj.max_financial_benefit or ""):
-                estimated_benefit_sum += 500000
-            elif "78,000" in (scheme_obj.max_financial_benefit or ""):
-                estimated_benefit_sum += 78000
+            estimated_benefit_sum += _estimated_benefit_value(scheme_obj.max_financial_benefit)
         elif result.status == "PARTIALLY_ELIGIBLE":
             partially_eligible_count += 1
 
     persona.estimated_schemes_count = eligible_count
-    if estimated_benefit_sum >= 100000:
-        persona.estimated_total_benefit = f"₹{estimated_benefit_sum/100000:.1f} Lakhs+"
-    elif estimated_benefit_sum > 0:
-        persona.estimated_total_benefit = f"₹{estimated_benefit_sum:,}"
-    else:
-        persona.estimated_total_benefit = "₹10,000+"
+    persona.estimated_total_benefit = _format_total_benefit(estimated_benefit_sum)
 
     return CitizenEvaluationResponse(
         profile=profile,

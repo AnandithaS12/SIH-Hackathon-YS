@@ -1,0 +1,90 @@
+{
+  "iteration": 1,
+  "app": "Yojana Setu (eligibility-bridge.preview.emergentagent.com)",
+  "mode": "generate",
+  "summary": "Post-refactor regression pass. All 8 acceptance criteria exercised: 1 backend test file (2 tests) + 8 named browser checks (+1 ingress re-run of criterion 1 through APP_URL). No regressions found in the eligibility engine split, router helper extraction, deadline hardening, or the chat/filters/document-locker component extraction. All checks passed on first attempt.",
+  "passed": 9,
+  "failed": 0,
+  "bugs": [],
+  "action_items": [],
+  "retest_needed": false,
+  "checks": [
+    {
+      "criterion": "Eligibility hard blockers still return INELIGIBLE after the engine refactor (API side: persona + counts + state/PwD blockers)",
+      "name": "test_tscheck_eligibility_engine.py::test_mp_female_farmer_persona_and_counts",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "POST /api/citizens/evaluate (MP female farmer, OBC, Farmer, income 120000, BPL+land+girl child) -> 200; persona.title='Krishi & Annadata Agricultural Producer', total_schemes_evaluated=40, eligible_count=19, partially_eligible_count=13 (matches seed_facts exactly)"
+    },
+    {
+      "criterion": "Eligibility hard blockers still return INELIGIBLE after the engine refactor",
+      "name": "test_tscheck_eligibility_engine.py::test_mp_female_farmer_hard_blockers",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "Same request -> eligibility_map: pm-kisan=ELIGIBLE, ladli-behna-mp=ELIGIBLE, gruha-lakshmi-karnataka=INELIGIBLE (state-restricted to Karnataka), adip-disability-aids=INELIGIBLE (PwD-only). No cross-state leak."
+    },
+    {
+      "criterion": "Questionnaire completes across all 4 steps and produces a persona + scheme matches",
+      "name": "questionnaire-full-flow",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Filled step1 (name/age/state) -> step2 (category/income/area/BPL) -> step3 (occupation/land/girl-child) -> step4 confirmation summary showed Name='Sunita Devi', Age='34 years'; submit navigated to /results with persona-title containing 'Krishi & Annadata Agricultural Producer', stat-eligible-count=19, stat-partial-count=13, stat-total-evaluated=40. Screenshots captured."
+    },
+    {
+      "criterion": "Questionnaire completes across all 4 steps and produces a persona + scheme matches (ingress re-verification via APP_URL)",
+      "name": "questionnaire-full-flow-ingress",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Same flow run against https://eligibility-bridge.preview.emergentagent.com ingress; reached /results with persona-title + stat-eligible-count=19."
+    },
+    {
+      "criterion": "Age validation uses the named MIN_AGE/MAX_AGE constants",
+      "name": "questionnaire-age-validation",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Blank name -> toast 'Please enter your name to continue', stays on step 1. Age=0 and Age=200 -> toast 'Please enter a valid age between 1 and 110', stays on step 1 both times. Age=34 -> progresses to step 2."
+    },
+    {
+      "criterion": "Eligibility hard blockers still return INELIGIBLE after the engine refactor (UI badges)",
+      "name": "results-eligibility-badges",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Seeded evaluation via real /api/citizens/evaluate response into yojana-setu:evaluation localStorage key, set eligibility filter to 'All schemes'. scheme-status-badge-pm-kisan and -ladli-behna-mp show 'Eligible'; scheme-status-badge-gruha-lakshmi-karnataka and -adip-disability-aids show 'Not Eligible'."
+    },
+    {
+      "criterion": "Extracted SchemeFilters component drives all filtering",
+      "name": "results-scheme-filters",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "search 'PM-KISAN' narrowed count below initial and rendered-card count matched scheme-result-count text every time; sector='Agriculture' narrowed count; govLevel Central-only vs State-only produced different counts; statusFilter='Eligible only' produced exactly 19 cards matching backend eligible_count."
+    },
+    {
+      "criterion": "Extracted DocumentLockerPanel still computes readiness",
+      "name": "results-document-locker",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "12 document-locker-item rows rendered. readiness-percentage started at 0%, rose above 0% after ticking 2 checkboxes, and returned to exactly 0% after unticking both."
+    },
+    {
+      "criterion": "Scheme comparison still works and includes the cut-off row",
+      "name": "results-compare-schemes",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "With 1 scheme selected, generate-comparison-button was disabled. With PM-KISAN + MP Ladli Behna selected (2), button enabled; generated table showed comparison-row-deadline, -ministry, -sector, -benefit_type, -age_limit, -official_portal_url."
+    },
+    {
+      "criterion": "Refactored chat (useChat + ChatComposer + ChatMessageBubble) still streams a reply and offers read-aloud",
+      "name": "chat-streams-reply",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Launcher opened chat-panel with mic/textarea/send. Sent 'PM-KISAN ke liye kaun se documents chahiye?'; assistant bubble filled with non-empty text within 25s, contained no literal '**', and a chat-speak-button (Listen) appeared. Switched header language to Tamil, closed and reopened panel with no error."
+    },
+    {
+      "criterion": "Deadline surfaces still render after the refactor",
+      "name": "results-deadline-surfaces",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "All scheme-deadline-headline chips matched one of the 4 allowed patterns (Open all year / Time-limited after event / Next cut-off .../ Closes in N days). scheme-details-button opened detail-deadline-panel ('Application window'). Ticking 'Closing within 30 days only' did not crash the page (empty/filtered state acceptable per seed_facts)."
+    }
+  ]
+}

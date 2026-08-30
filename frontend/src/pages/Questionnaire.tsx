@@ -73,17 +73,25 @@ const EDUCATION_OPTIONS = [
 
 const TOTAL_STEPS = 4;
 
+// Validation / default bounds — kept as named constants so they can be tuned in one place.
+const MIN_AGE = 1;
+const MAX_AGE = 110;
+const DEFAULT_AGE = 30;
+const DEFAULT_ANNUAL_INCOME = 150000;
+const INCOME_STEP = 10000;
+const LAND_SIZE_STEP = 0.5;
+
 export default function Questionnaire() {
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
   const [form, setForm] = useState<QuestionnaireRequest>({
     name: "",
-    age: 30,
+    age: DEFAULT_AGE,
     gender: "female",
     state: "Madhya Pradesh",
     category: "General",
     occupation: "Farmer / Agriculture",
-    annual_income: 150000,
+    annual_income: DEFAULT_ANNUAL_INCOME,
     is_specially_abled: false,
     disability_percentage: null,
     is_minority: false,
@@ -133,8 +141,8 @@ export default function Questionnaire() {
       toast.error("Please enter your name to continue");
       return;
     }
-    if (step === 1 && (form.age < 1 || form.age > 110)) {
-      toast.error("Please enter a valid age between 1 and 110");
+    if (step === 1 && (form.age < MIN_AGE || form.age > MAX_AGE)) {
+      toast.error(`Please enter a valid age between ${MIN_AGE} and ${MAX_AGE}`);
       return;
     }
     if (step < TOTAL_STEPS) {
@@ -202,8 +210,8 @@ export default function Questionnaire() {
                   <Input
                     id="age"
                     type="number"
-                    min={1}
-                    max={110}
+                    min={MIN_AGE}
+                    max={MAX_AGE}
                     value={form.age}
                     onChange={(e) => update("age", Number(e.target.value))}
                     className="h-11"
@@ -293,7 +301,7 @@ export default function Questionnaire() {
                     id="income"
                     type="number"
                     min={0}
-                    step={10000}
+                    step={INCOME_STEP}
                     value={form.annual_income}
                     onChange={(e) => update("annual_income", Number(e.target.value))}
                     className="h-11"
@@ -453,7 +461,7 @@ export default function Questionnaire() {
                       id="land"
                       type="number"
                       min={0}
-                      step={0.5}
+                      step={LAND_SIZE_STEP}
                       value={form.land_size_acres ?? 0}
                       onChange={(e) => update("land_size_acres", Number(e.target.value))}
                       className="h-11"

@@ -1,31 +1,19 @@
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import {
   ExternalLink,
-  FileCheck2,
-  Filter,
   GitCompareArrows,
   Landmark,
   Printer,
-  Search,
   Sparkles,
   X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { apiGet, apiPost } from "@/lib/api";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -39,63 +27,45 @@ import YojanaSahayakChat from "@/components/YojanaSahayakChat";
 import SchemeCard from "@/components/SchemeCard";
 import SchemeDetailDialog from "@/components/SchemeDetailDialog";
 import DeadlineAlertBanner from "@/components/DeadlineAlertBanner";
+import SchemeFilters from "@/components/SchemeFilters";
+import type { SchemeFilterState } from "@/components/SchemeFilters";
+import DocumentLockerPanel from "@/components/DocumentLockerPanel";
 import { useEvaluation, useOwnedDocuments } from "@/lib/citizenStore";
 import type {
-  DocumentReadinessResponse,
-  MasterDocument,
   Scheme,
   SchemeComparisonResponse,
 } from "@/types";
 
-const SECTORS = [
-  "All",
-  "Agriculture",
-  "Healthcare",
-  "Housing & Sanitation",
-  "Education & Skills",
-  "Financial Inclusion & Pension",
-  "Women & Child",
-  "Employment & MSME",
-  "Social Security",
-];
-
-const STATUS_FILTERS = [
-  { value: "eligible", label: "Eligible only" },
-  { value: "likely", label: "Eligible + Likely" },
-  { value: "all", label: "All schemes" },
-];
+const STATUS_FILTER_DEFAULT = "likely";
 
 export default function Results() {
   const evaluation = useEvaluation();
   const { ownedDocuments, toggleDocument } = useOwnedDocuments();
 
-  const [search, setSearch] = useState("");
-  const [sector, setSector] = useState("All");
-  const [statusFilter, setStatusFilter] = useState("likely");
-  const [govLevel, setGovLevel] = useState("all");
+  const [filters, setFilters] = useState<SchemeFilterState>({
+    search: "",
+    sector: "All",
+    govLevel: "all",
+    statusFilter: STATUS_FILTER_DEFAULT,
+    onlyClosingSoon: false,
+  });
+  const { search, sector, govLevel, statusFilter, onlyClosingSoon } = filters;
+
+  const updateFilter = useCallback(
+    <K extends keyof SchemeFilterState>(key: K, value: SchemeFilterState[K]) => {
+      setFilters((prev) => ({ ...prev, [key]: value }));
+    },
+    [],
+  );
+
   const [activeScheme, setActiveScheme] = useState<Scheme | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [compareIds, setCompareIds] = useState<string[]>([]);
   const [comparison, setComparison] = useState<SchemeComparisonResponse | null>(null);
-  const [onlyClosingSoon, setOnlyClosingSoon] = useState(false);
 
   const { data: schemes, isError: schemesError } = useQuery({
     queryKey: ["schemes"],
     queryFn: () => apiGet<Scheme[]>("/schemes"),
-  });
-
-  const { data: masterDocs } = useQuery({
-    queryKey: ["master-documents"],
-    queryFn: () => apiGet<MasterDocument[]>("/documents/master"),
-  });
-
-  const { data: readiness } = useQuery({
-    queryKey: ["document-readiness", ownedDocuments],
-    queryFn: () =>
-      apiPost<DocumentReadinessResponse>("/documents/evaluate-readiness", {
-        owned_documents: ownedDocuments,
-      }),
-    enabled: ownedDocuments.length >= 0,
   });
 
   const compareMutation = useMutation({
@@ -312,92 +282,13 @@ export default function Results() {
 
           {/* ---------- SCHEMES ---------- */}
           <TabsContent value="schemes" className="pt-6">
-            <div className="rounded-xl border border-border bg-card p-4 sm:p-5">
-              <div className="flex flex-wrap items-end gap-3">
-                <div className="relative min-w-[220px] flex-1">
-                  <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    placeholder="Search scheme, ministry or benefit…"
-                    className="h-11 pl-9"
-                    data-testid="scheme-search-input"
-                  />
-                </div>
-
-                <Select value={sector} onValueChange={(v: string) => setSector(v)}>
-                  <SelectTrigger className="h-11 w-[190px]" data-testid="sector-filter-select">
-                    <SelectValue>{(v) => (v as string) || "All sectors"}</SelectValue>
-                  </SelectTrigger>
-                  <SelectContent className="max-h-[300px]">
-                    {SECTORS.map((s) => (
-                      <SelectItem key={s} value={s}>
-                        {s}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-
-                <Select value={govLevel} onValueChange={(v: string) => setGovLevel(v)}>
-                  <SelectTrigger className="h-11 w-[160px]" data-testid="gov-level-filter-select">
-                    <SelectValue>
-                      {(v) =>
-                        v === "central"
-                          ? "Central only"
-                          : v === "state"
-                            ? "State only"
-                            : "Central + State"
-                      }
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Central + State</SelectItem>
-                    <SelectItem value="central">Central only</SelectItem>
-                    <SelectItem value="state">State only</SelectItem>
-                  </SelectContent>
-                </Select>
-
-                {evaluation && (
-                  <Select value={statusFilter} onValueChange={(v: string) => setStatusFilter(v)}>
-                    <SelectTrigger className="h-11 w-[180px]" data-testid="status-filter-select">
-                      <SelectValue>
-                        {(v) =>
-                          STATUS_FILTERS.find((f) => f.value === v)?.label ?? "Eligibility"
-                        }
-                      </SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                      {STATUS_FILTERS.map((f) => (
-                        <SelectItem key={f.value} value={f.value}>
-                          {f.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-              </div>
-
-              <p
-                className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted-foreground"
-                data-testid="scheme-result-count"
-              >
-                <span className="inline-flex items-center gap-2">
-                  <Filter className="size-3.5" />
-                  Showing {visibleSchemes.length} scheme
-                  {visibleSchemes.length === 1 ? "" : "s"}
-                  {evaluation ? " matched against your profile" : " from the national database"}
-                </span>
-
-                <label className="inline-flex cursor-pointer items-center gap-2 font-semibold text-foreground">
-                  <Checkbox
-                    checked={onlyClosingSoon}
-                    onCheckedChange={(c) => setOnlyClosingSoon(Boolean(c))}
-                    data-testid="closing-soon-filter-checkbox"
-                  />
-                  Closing within 30 days only
-                </label>
-              </p>
-            </div>
+            <SchemeFilters
+              {...filters}
+              showEligibilityFilter={Boolean(evaluation)}
+              resultCount={visibleSchemes.length}
+              hasProfile={Boolean(evaluation)}
+              onChange={updateFilter}
+            />
 
             {schemesError && (
               <div
@@ -441,161 +332,11 @@ export default function Results() {
 
           {/* ---------- DOCUMENT LOCKER ---------- */}
           <TabsContent value="documents" className="pt-6">
-            <div className="grid gap-6 lg:grid-cols-[1.35fr_1fr]">
-              <div>
-                <h2 className="font-heading text-xl font-bold tracking-tight">
-                  Tick the documents you already have
-                </h2>
-                <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
-                  Nothing is uploaded — this is a private checklist stored on your device so you
-                  know exactly what to collect before visiting a CSC or Gram Panchayat.
-                </p>
-
-                <div className="mt-5 space-y-3">
-                  {(masterDocs ?? []).map((d) => {
-                    const owned = ownedDocuments.includes(d.name);
-                    return (
-                      <label
-                        key={d.id}
-                        className={`flex cursor-pointer gap-3.5 rounded-xl border p-4 transition-colors duration-200 ${
-                          owned
-                            ? "border-[#059669]/40 bg-[#059669]/6"
-                            : "border-border bg-card hover:bg-secondary/40"
-                        }`}
-                        data-testid={`document-locker-item-${d.id}`}
-                      >
-                        <Checkbox
-                          checked={owned}
-                          onCheckedChange={() => toggleDocument(d.name)}
-                          className="mt-0.5"
-                          data-testid={`document-checkbox-${d.id}`}
-                        />
-                        <div className="min-w-0">
-                          <p className="text-sm font-bold text-foreground">
-                            {d.name}
-                            <span className="ml-2 font-normal text-muted-foreground">
-                              {d.name_hi}
-                            </span>
-                          </p>
-                          <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                            {d.description}
-                          </p>
-                          <p className="mt-1.5 text-xs leading-relaxed text-[#1E3A8A]">
-                            How to get: {d.how_to_obtain}
-                          </p>
-                          <div className="mt-2 flex flex-wrap items-center gap-2">
-                            <Badge variant="secondary" className="text-[10px]">
-                              {d.category}
-                            </Badge>
-                            <Badge variant="outline" className="text-[10px]">
-                              Used by ~{d.common_schemes_count} schemes
-                            </Badge>
-                            {d.digital_portal_url && (
-                              <a
-                                href={d.digital_portal_url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                onClick={(e) => e.stopPropagation()}
-                                className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#EA580C] hover:underline"
-                                data-testid={`document-portal-link-${d.id}`}
-                              >
-                                Official portal
-                                <ExternalLink className="size-3" />
-                              </a>
-                            )}
-                          </div>
-                        </div>
-                      </label>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <aside className="lg:sticky lg:top-24 lg:self-start">
-                <div
-                  className="rounded-xl border border-border bg-card p-6"
-                  data-testid="document-readiness-panel"
-                >
-                  <h3 className="flex items-center gap-2 font-heading text-lg font-bold tracking-tight">
-                    <FileCheck2 className="size-5 text-[#059669]" />
-                    Document readiness
-                  </h3>
-
-                  <p
-                    className="mt-4 font-heading text-5xl font-black leading-none text-[#1E3A8A]"
-                    data-testid="readiness-percentage"
-                  >
-                    {readiness?.readiness_percentage ?? 0}%
-                  </p>
-                  <p className="mt-1.5 text-xs text-muted-foreground">
-                    {readiness?.owned_documents_count ?? 0} of{" "}
-                    {readiness?.total_documents_count ?? 12} core documents ready
-                  </p>
-
-                  <div className="mt-4 h-2 w-full overflow-hidden rounded-full bg-secondary">
-                    <div
-                      className="h-full rounded-full bg-[#059669] transition-[width] duration-500"
-                      style={{ width: `${readiness?.readiness_percentage ?? 0}%` }}
-                    />
-                  </div>
-
-                  <dl className="mt-6 space-y-3 border-t border-border pt-4">
-                    <div className="flex items-center justify-between gap-3">
-                      <dt className="text-xs text-muted-foreground">
-                        Schemes you can apply to today
-                      </dt>
-                      <dd
-                        className="font-heading text-xl font-extrabold text-[#059669]"
-                        data-testid="readiness-unlocked-count"
-                      >
-                        {readiness?.unlocked_schemes_count ?? 0}
-                      </dd>
-                    </div>
-                    <div className="flex items-center justify-between gap-3">
-                      <dt className="text-xs text-muted-foreground">
-                        Almost ready (1-2 docs pending)
-                      </dt>
-                      <dd className="font-heading text-xl font-extrabold text-[#D97706]">
-                        {readiness?.partially_ready_schemes_count ?? 0}
-                      </dd>
-                    </div>
-                  </dl>
-                </div>
-
-                {requiredDocsAcrossEligible.length > 0 && (
-                  <div className="mt-5 rounded-xl border border-border bg-card p-6">
-                    <h3 className="font-heading text-base font-bold tracking-tight">
-                      Most-needed for your matched schemes
-                    </h3>
-                    <ul className="mt-3 space-y-2">
-                      {requiredDocsAcrossEligible.map(([name, count]) => {
-                        const owned = ownedDocuments.some(
-                          (o) =>
-                            name.toLowerCase().includes(o.toLowerCase()) ||
-                            o.toLowerCase().includes(name.toLowerCase()),
-                        );
-                        return (
-                          <li
-                            key={name}
-                            className="flex items-start justify-between gap-3 text-xs"
-                            data-testid={`needed-document-${name}`}
-                          >
-                            <span
-                              className={owned ? "text-muted-foreground line-through" : "text-foreground"}
-                            >
-                              {name}
-                            </span>
-                            <span className="shrink-0 font-semibold text-muted-foreground">
-                              {count}×
-                            </span>
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  </div>
-                )}
-              </aside>
-            </div>
+            <DocumentLockerPanel
+              ownedDocuments={ownedDocuments}
+              onToggleDocument={toggleDocument}
+              neededDocuments={requiredDocsAcrossEligible}
+            />
           </TabsContent>
 
           {/* ---------- COMPARE ---------- */}

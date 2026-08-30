@@ -73,17 +73,21 @@ def compute_deadline_status(deadline: SchemeDeadline, today: Optional[date] = No
     next_date, next_label = upcoming[0]
     days = (next_date - today).days
 
+    # Defaults guarantee both values are defined regardless of branch taken.
+    urgency = "OPEN"
+    headline = f"Next cut-off {_human_date(next_date)}"
+
     if days <= CRITICAL_DAYS:
         urgency = "CLOSING_CRITICAL"
-        headline = "Closes in 1 day" if days == 1 else (
-            "Closes today" if days == 0 else f"Closes in {days} days"
-        )
+        if days == 0:
+            headline = "Closes today"
+        elif days == 1:
+            headline = "Closes in 1 day"
+        else:
+            headline = f"Closes in {days} days"
     elif days <= SOON_DAYS:
         urgency = "CLOSING_SOON"
         headline = f"Closes in {days} days"
-    else:
-        urgency = "OPEN"
-        headline = f"Next cut-off {_human_date(next_date)}"
 
     detail = (
         f"{next_label} closes on {_human_date(next_date)}"

@@ -171,7 +171,8 @@ export function useSpeechRecognition(languageCode: string) {
       recognitionRef.current = recognition;
       try {
         recognition.start();
-      } catch {
+      } catch (err) {
+        console.error("[speech] SpeechRecognition.start() failed:", err);
         setError("Could not start voice input. Please try again.");
         setIsListening(false);
       }
@@ -181,7 +182,9 @@ export function useSpeechRecognition(languageCode: string) {
 
   useEffect(() => () => recognitionRef.current?.abort(), []);
 
-  return { isSupported, isListening, interimTranscript, error, start, stop, clearError: () => setError(null) };
+  const clearError = useCallback(() => setError(null), []);
+
+  return { isSupported, isListening, interimTranscript, error, start, stop, clearError };
 }
 
 /**
@@ -191,8 +194,16 @@ export function useSpeechRecognition(languageCode: string) {
 export function useSpeechSynthesis(languageCode: string) {
   const [speakingId, setSpeakingId] = useState<string | null>(null);
   const [voicesReady, setVoicesReady] = useState(false);
+  // Mirrors speakingId so `speak` stays referentially stable across renders and
+  // never closes over a stale id.
+  const speakingIdRef = useRef<string | null>(null);
 
   const isSupported = typeof window !== "undefined" && "speechSynthesis" in window;
+
+  const setSpeaking = useCallback((id: string | null) => {
+    speakingIdRef.current = id;
+    setSpeakingId(id);
+  }, []);
 
   // Voices load asynchronously in Chrome; re-render once they arrive.
   useEffect(() => {
@@ -208,17 +219,18 @@ export function useSpeechSynthesis(languageCode: string) {
   const stop = useCallback(() => {
     if (!isSupported) return;
     window.speechSynthesis.cancel();
-    setSpeakingId(null);
-  }, [isSupported]);
+    setSpeaking(null);
+  }, [isSupported, setSpeaking]);
 
   const speak = useCallback(
     (id: string, text: string) => {
       if (!isSupported || !text.trim()) return;
 
       // Tapping the speaker on the currently playing reply stops it.
+      const wasSpeaking = speakingIdRef.current === id;
       window.speechSynthesis.cancel();
-      if (speakingId === id) {
-        setSpeakingId(null);
+      if (wasSpeaking) {
+        setSpeaking(null);
         return;
       }
 
@@ -244,13 +256,13 @@ export function useSpeechSynthesis(languageCode: string) {
       const chosen = exact ?? sameLanguage ?? indian;
       if (chosen) utterance.voice = chosen;
 
-      utterance.onend = () => setSpeakingId(null);
-      utterance.onerror = () => setSpeakingId(null);
+      utterance.onend = () => setSpeaking(null);
+      utterance.onerror = () => setSpeaking(null);
 
-      setSpeakingId(id);
+      setSpeaking(id);
       window.speechSynthesis.speak(utterance);
     },
-    [isSupported, languageCode, speakingId],
+    [isSupported, languageCode, setSpeaking],
   );
 
   useEffect(() => {

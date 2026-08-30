@@ -10,7 +10,15 @@ function readJson<T>(key: string): T | null {
   try {
     const raw = localStorage.getItem(key);
     return raw ? (JSON.parse(raw) as T) : null;
-  } catch {
+  } catch (err) {
+    // Corrupt entry or storage disabled (private mode / quota). Drop the bad value
+    // so the app starts clean instead of failing on every read.
+    console.error(`[citizenStore] Could not read "${key}" from localStorage:`, err);
+    try {
+      localStorage.removeItem(key);
+    } catch {
+      console.error(`[citizenStore] Could not clear corrupt key "${key}".`);
+    }
     return null;
   }
 }
@@ -18,8 +26,9 @@ function readJson<T>(key: string): T | null {
 function writeJson(key: string, value: unknown) {
   try {
     localStorage.setItem(key, JSON.stringify(value));
-  } catch {
-    /* storage unavailable — non-fatal */
+  } catch (err) {
+    // Storage unavailable or full — non-fatal, but must not fail silently.
+    console.error(`[citizenStore] Could not save "${key}" to localStorage:`, err);
   }
   window.dispatchEvent(new Event(STORE_EVENT));
 }

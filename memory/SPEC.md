@@ -26,14 +26,51 @@ languages).
 - `chat_sessions` — persisted Yojana Sahayak conversations (`id`, `messages[]`, `citizen_context`).
 - `status_checks` — template health collection (unused by features).
 
-## Eligibility engine (`backend/lib/eligibility_engine.py`)
-- `determine_persona(profile)` → one of 10 personas: DIVYANGJAN_HERO, SENIOR_CITIZEN,
-  ANNADATA_FARMER, VISHWAKARMA_ARTISAN, SVANIDHI_VENDOR, YOUTH_SCHOLAR, MATRU_SHAKTI, NARI_SHAKTI,
-  SHRAMIK_CITIZEN, MSME_ENTREPRENEUR, CITIZEN_GENERAL.
-- `evaluate_scheme_eligibility(scheme, profile)` → status `ELIGIBLE` / `PARTIALLY_ELIGIBLE` /
-  `INELIGIBLE`, match_score 0-100, passed_criteria[], missing_criteria[], next_action_tip,
-  required_documents_status[]. Checks state, age, gender, category, occupation (with semantic
-  matching), income ceiling, land, BPL, disability, minority, area type, pregnancy, girl child.
+## Eligibility engine (refactored into 3 modules)
+- `backend/lib/personas.py` — `PERSONA_RULES`: an ordered list of `(predicate, builder)` pairs,
+  highest priority first. `determine_persona()` returns the first match, else `CITIZEN_GENERAL`.
+  Ten personas: DIVYANGJAN_HERO, SENIOR_CITIZEN, ANNADATA_FARMER, VISHWAKARMA_ARTISAN,
+  SVANIDHI_VENDOR, YOUTH_SCHOLAR, MATRU_SHAKTI, NARI_SHAKTI, SHRAMIK_CITIZEN, MSME_ENTREPRENEUR.
+- `backend/lib/eligibility_checks.py` — one `_check_*` function per criterion (state, age, gender,
+  category, occupation w/ semantic matching, income, land, BPL, disability, minority, area,
+  pregnancy, girl child), each recording its verdict on a shared `CheckResult` (`ok`/`fail`/`block`).
+  `CRITERION_CHECKS` fixes the evaluation order — **this order is part of the contract**, because the
+  first entry of `missing_criteria` is shown to the citizen as the headline reason. Also holds
+  `build_document_status()` and the tunables `INCOME_GRACE_MULTIPLIER` (1.3) and
+  `BPL_SOFT_INCOME_CEILING` (180000).
+- `backend/lib/eligibility_engine.py` — orchestration only. Runs the checks, computes `match_score`,
+  and `_classify()` maps verdicts to a status (`ELIGIBLE` / `PARTIALLY_ELIGIBLE` / `INELIGIBLE`).
+  `_classify` seeds all three return values with defaults before branching, so status,
+  is_fully_eligible and next_action_tip are always defined. `determine_persona` is re-exported here.
+- A **hard blocker** (wrong state, wrong gender, non-PwD on a PwD-only scheme, wrong area type unless
+  semi-urban) is decisive and can never soften into PARTIALLY_ELIGIBLE.
+- Regression guard: 10 representative profiles x 40 schemes = 400 evaluations were hashed before and
+  after the refactor and matched byte-for-byte (SHA256 `e745a1f5...`), covering statuses, scores,
+  every criteria string, tips and document flags. Hash the same way before changing any check
+  function or its ordering.
+
+## Frontend component map
+- `pages/Results.tsx` (~490 lines) composes `SchemeFilters` (exports `SchemeFilterState`, `SECTORS`,
+  `STATUS_FILTERS`), `DocumentLockerPanel` (owns its own master-documents + readiness queries),
+  `DeadlineAlertBanner`, `SchemeCard`, `SchemeDetailDialog`. Filter state is a single `filters`
+  object updated through `updateFilter(key, value)`.
+- `components/YojanaSahayakChat.tsx` (~186 lines) is a shell wiring `lib/useChat.ts` (messages + SSE
+  streaming + session continuity), `ChatComposer` (mic, live transcript, textarea, send) and
+  `ChatMessageBubble` (bubble + read-aloud control).
+- `lib/speech.ts` — `speak` stays referentially stable via a `speakingIdRef` mirror and `clearError`
+  is memoised, so neither closes over stale state.
+- `lib/citizenStore.ts` — `readJson` logs and self-heals a corrupt entry (removes the bad key) rather
+  than failing silently; `writeJson` logs quota / private-mode failures.
+- `pages/Questionnaire.tsx` — named bounds: `MIN_AGE` 1, `MAX_AGE` 110, `DEFAULT_AGE` 30,
+  `DEFAULT_ANNUAL_INCOME` 150000, `INCOME_STEP` 10000, `LAND_SIZE_STEP` 0.5.
+
+## Accepted design decisions (not defects)
+- Citizen answers are stored **unencrypted in localStorage** by design: the app has no accounts and
+  promises the data "stays on your device". Client-side encryption with a client-held key would not
+  defend against XSS, and moving data server-side needs the auth system the product deliberately
+  omits. Revisit only if accounts are introduced.
+- `is None` / `is not None` / truthiness checks on `Optional[bool]` rule fields are intentional;
+  there are no `is` comparisons against string or numeric literals in the backend.
 
 ## API endpoints (all under /api)
 - `GET  /` — health/banner.
