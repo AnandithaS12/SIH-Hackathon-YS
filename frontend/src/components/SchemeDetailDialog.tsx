@@ -1,5 +1,6 @@
 import {
   ArrowUpRight,
+  CalendarClock,
   CheckCircle2,
   CircleDashed,
   ExternalLink,
@@ -68,6 +69,37 @@ export default function SchemeDetailDialog({ scheme, result, open, onOpenChange 
         </div>
 
         <p className="text-sm leading-relaxed text-muted-foreground">{scheme.description}</p>
+
+        {/* Application window / cut-off */}
+        {scheme.deadline_status && (
+          <div
+            className={`rounded-xl border p-4 ${
+              scheme.deadline_status.urgency === "CLOSING_CRITICAL"
+                ? "border-destructive/40 bg-destructive/6"
+                : scheme.deadline_status.urgency === "CLOSING_SOON"
+                  ? "border-[#D97706]/40 bg-[#D97706]/6"
+                  : "border-border bg-secondary/50"
+            }`}
+            data-testid="detail-deadline-panel"
+          >
+            <p className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
+              <CalendarClock className="size-3.5" />
+              Application window
+            </p>
+            <p
+              className="mt-1.5 font-heading text-base font-bold leading-snug text-foreground"
+              data-testid="detail-deadline-headline"
+            >
+              {scheme.deadline_status.headline}
+            </p>
+            <p
+              className="mt-1 text-xs leading-relaxed text-muted-foreground"
+              data-testid="detail-deadline-detail"
+            >
+              {scheme.deadline_status.detail}
+            </p>
+          </div>
+        )}
 
         <Tabs defaultValue="eligibility" className="mt-2">
           <TabsList variant="line" className="w-full justify-start overflow-x-auto">

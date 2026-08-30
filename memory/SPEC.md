@@ -85,6 +85,39 @@ markdown: `**bold**`, `*`/`-`/`•` bullets, numbered lists, `#` headings, bare 
 `[label](href)` links (rendered as tappable orange links). Prevents raw asterisks/brackets from
 leaking into replies. Everything stays React nodes — no HTML injection.
 
+## Application cut-off dates / deadline warnings
+Server-anchored to the **IST** clock (`APP_TZ=Asia/Kolkata` in backend/.env) via `lib/dates.today_iso()`
+— never computed in the browser, so a wrong device clock can't tell a citizen a closed scheme is open.
+
+- `backend/lib/deadlines.py` — `compute_deadline_status()` resolves the next occurrence of each
+  recurring `(month, day)` cut-off and classifies urgency:
+  `CLOSING_CRITICAL` (≤7 days) · `CLOSING_SOON` (≤30 days) · `OPEN` (>30 days) ·
+  `ROLLING` (genuinely open all year) · `EVENT_BASED` (window starts from a personal event).
+  Handles year rollover and 29 Feb in non-leap years. `attach_deadline_status()` is applied on every
+  scheme read; `deadline_status` is computed per request and never stored in Mongo.
+- `SchemeDeadline` (stored) = `window_type` + `cutoff_dates[]` + `note` + `source_note`.
+  `DeadlineStatus` (computed) = urgency, headline, detail, next_cutoff_date, days_remaining, is_urgent.
+- Seed data: `SCHEME_DEADLINES` (20 schemes with real dates) and `ROLLING_DEADLINE_NOTES` (20 honestly
+  open all year) in `backend/seed.py`, keyed by scheme id. Real dates include PM Fasal Bima Kharif
+  31 Jul / Rabi 31 Dec, NSP scholarships 31 Oct, Kanyashree 15 Oct, PM-KISAN per-instalment eKYC
+  cycles, FY-budget schemes 31 Mar, PMJJBY/PMSBY renewal 31 May, Rythu Bandhu seasonal cycles.
+  Event-based: PMMVY (270 days from LMP), Sukanya Samriddhi (before girl turns 10), Kanya Sumangala
+  (6 stages), Yuva Nidhi (after 180 days unemployed), ADIP/Vayoshri (district camps), NAPS.
+- New endpoint: `GET /api/schemes/deadlines/upcoming?within_days=30&scheme_ids=a,b` → `{today,
+  within_days, count, deadlines[]}` sorted soonest-first. `within_days` is validated 1-365 (422 otherwise).
+- `GET /api/schemes?closing_soon=true` returns only urgent schemes.
+- Comparison table gained an "Application Cut-off" row.
+
+### Frontend surfaces
+- `components/DeadlineAlertBanner.tsx` — banner above the tabs on `/results`, scoped to the citizen's
+  matched schemes, listing schemes closing within 30 days (soonest first, top 3 then expandable).
+  Red styling when anything is inside 7 days, amber otherwise. Each row has Details + "Apply now".
+  Renders nothing when no scheme is closing — that is correct, not a failure.
+- `SchemeCard` — per-card cut-off chip ("Closes in N days" / "Next cut-off 31 Oct 2026" /
+  "Open all year" / "Time-limited after event"), with an "Urgent" pill inside 7 days.
+- `SchemeDetailDialog` — "Application window" panel with the full sentence and later windows.
+- `/results` — "Closing within 30 days only" checkbox filter.
+- `/report` — each matched scheme prints its cut-off line.
 ## Auth
 None. No login, no accounts, no credentials. All citizen data is held in browser localStorage only.
 

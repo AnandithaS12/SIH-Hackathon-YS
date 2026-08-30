@@ -1953,6 +1953,135 @@ SCHEMES_DATA = [
 
 ]
 
+# ---------------------------------------------------------------------------
+# Real application cut-off dates, keyed by scheme id. Kept separate from the
+# scheme bodies so the dates can be reviewed in one place.
+# window_type: ROLLING (open all year) | ANNUAL | SEASONAL | EVENT_BASED
+# Dates are recurring annual (month, day) — the API computes the next occurrence
+# against the IST server clock.
+# ---------------------------------------------------------------------------
+SCHEME_DEADLINES = {
+    "pm-fasal-bima": {
+        "window_type": "SEASONAL",
+        "cutoff_dates": [
+            {"label": "Kharif season enrolment", "month": 7, "day": 31},
+            {"label": "Rabi season enrolment", "month": 12, "day": 31},
+        ],
+        "source_note": "State governments may notify crop-specific dates slightly earlier.",
+    },
+    "post-matric-scholarship-sc-st-obc": {
+        "window_type": "ANNUAL",
+        "cutoff_dates": [{"label": "National Scholarship Portal (NSP) application", "month": 10, "day": 31}],
+        "source_note": "Institute verification usually closes ~15 days after the student deadline.",
+    },
+    "pragati-scholarship-girls": {
+        "window_type": "ANNUAL",
+        "cutoff_dates": [{"label": "AICTE Pragati application on NSP", "month": 10, "day": 31}],
+    },
+    "pm-kisan": {
+        "window_type": "SEASONAL",
+        "cutoff_dates": [
+            {"label": "Instalment 1 (Apr-Jul) eKYC", "month": 5, "day": 31},
+            {"label": "Instalment 2 (Aug-Nov) eKYC", "month": 9, "day": 30},
+            {"label": "Instalment 3 (Dec-Mar) eKYC", "month": 1, "day": 31},
+        ],
+        "source_note": "Registration is open year-round, but eKYC must be done before each instalment cycle.",
+    },
+    "pm-surya-ghar-muft-bijli": {
+        "window_type": "ANNUAL",
+        "cutoff_dates": [{"label": "Financial-year subsidy allocation", "month": 3, "day": 31}],
+        "source_note": "Subsidy is released against the FY budget — applying early avoids queueing.",
+    },
+    "pm-kusum-solar-pump": {
+        "window_type": "ANNUAL",
+        "cutoff_dates": [{"label": "State solar pump allocation round", "month": 3, "day": 31}],
+        "source_note": "State agencies open limited quota rounds each financial year.",
+    },
+    "pm-krishi-sinchayee-pdmc": {
+        "window_type": "ANNUAL",
+        "cutoff_dates": [{"label": "Micro-irrigation subsidy allocation", "month": 3, "day": 31}],
+    },
+    "kanyashree-prakalpa-wb": {
+        "window_type": "ANNUAL",
+        "cutoff_dates": [{"label": "K1/K2 annual renewal through institution", "month": 10, "day": 15}],
+    },
+    "yuva-nidhi-karnataka": {
+        "window_type": "EVENT_BASED",
+        "note": "Apply after completing 180 days (6 months) of unemployment from your result date. A monthly self-declaration is required to keep the stipend running.",
+    },
+    "pm-matru-vandana": {
+        "window_type": "EVENT_BASED",
+        "note": "Register within 270 days of your Last Menstrual Period (LMP) date. The second instalment must be claimed after birth registration and the first vaccination cycle.",
+    },
+    "sukanya-samriddhi-yojana": {
+        "window_type": "EVENT_BASED",
+        "note": "The account must be opened before the girl child turns 10 years old — the window closes permanently on her 10th birthday.",
+    },
+    "kanya-sumangala-up": {
+        "window_type": "EVENT_BASED",
+        "note": "Each of the 6 stages must be claimed within its own event window (birth, vaccination, Class 1, Class 6, Class 9, graduation).",
+    },
+    "national-apprenticeship-naps": {
+        "window_type": "EVENT_BASED",
+        "note": "Employers post apprenticeship vacancies with their own closing dates — check the portal monthly for new batches.",
+    },
+    "adip-disability-aids": {
+        "window_type": "EVENT_BASED",
+        "note": "Distribution happens through district ALIMCO assessment camps. Register with your DDRC to be called for the next camp in your district.",
+    },
+    "rashtriya-vayoshri-yojana": {
+        "window_type": "EVENT_BASED",
+        "note": "Aids are distributed at district-level camps organised by the Social Welfare Officer — enrol to be notified of the next camp.",
+    },
+    "pm-jeevan-jyoti-bima": {
+        "window_type": "ANNUAL",
+        "cutoff_dates": [{"label": "Annual policy renewal (cover runs 1 Jun - 31 May)", "month": 5, "day": 31}],
+    },
+    "pm-suraksha-bima": {
+        "window_type": "ANNUAL",
+        "cutoff_dates": [{"label": "Annual policy renewal (cover runs 1 Jun - 31 May)", "month": 5, "day": 31}],
+    },
+    "rythu-bandhu-telangana": {
+        "window_type": "SEASONAL",
+        "cutoff_dates": [
+            {"label": "Kharif investment support cycle", "month": 6, "day": 30},
+            {"label": "Rabi investment support cycle", "month": 12, "day": 31},
+        ],
+    },
+    "pm-egp-subsidy": {
+        "window_type": "ANNUAL",
+        "cutoff_dates": [{"label": "Financial-year margin money allocation", "month": 3, "day": 31}],
+        "source_note": "KVIC processes applications against the annual FY target.",
+    },
+    "mo-ghara-odisha": {
+        "window_type": "ANNUAL",
+        "cutoff_dates": [{"label": "Financial-year housing loan sanction target", "month": 3, "day": 31}],
+    },
+}
+
+ROLLING_DEADLINE_NOTES = {
+    "ayushman-bharat-pmjay": "Ayushman card eKYC is open all year — you can generate your card any day and use it immediately at an empanelled hospital.",
+    "pm-awas-gramin": "Applications flow continuously through Awaas+ surveys and Gram Sabha approval — there is no annual cut-off, but the Gram Sabha list is finalised at each meeting.",
+    "pm-vishwakarma": "Artisan registration at CSC centres is open all year, subject to the scheme's overall five-year mission period.",
+    "pm-svanidhi": "Working-capital loan applications are accepted throughout the year at any lending branch.",
+    "pm-mudra-yojana": "Mudra loan applications are accepted by banks all year with no seasonal window.",
+    "mgnrega-employment": "Work can be demanded on any day of the year — the Panchayat must allot work within 15 days of your written demand.",
+    "atal-pension-yojana": "Enrolment is open all year until you turn 40 — joining earlier means a lower monthly contribution.",
+    "ignoaps-old-age-pension": "Pension applications are accepted throughout the year at the Block or Municipality office.",
+    "kisan-credit-card": "KCC applications are accepted year-round; banks must decide within 14 days.",
+    "pm-ujjwala-yojana": "Free LPG connections are issued all year at any Indane, Bharatgas or HP Gas distributor.",
+    "pmkvy-skills": "New training batches start continuously — enrol any time and join the next batch at your Kaushal Kendra.",
+    "pm-janaushadhi": "No application needed — simply walk into any Jan Aushadhi Kendra with a prescription on any day.",
+    "stand-up-india": "Loan applications are accepted year-round through the Stand-Up Mitra portal.",
+    "cgtmse-msme-credit": "Guarantee cover is issued whenever the bank sanctions your loan — no seasonal window.",
+    "mahila-samman-savings": "Deposits can be made any day, subject to the scheme's overall availability period notified by the Ministry of Finance.",
+    "lakhpati-didi": "Enrolment happens continuously through your village SHG and Cluster Level Federation.",
+    "poshan-abhiyaan-nutrition": "Register at your Anganwadi on any day — monthly take-home rations begin immediately.",
+    "ladli-behna-mp": "Applications are accepted in rolling Gram Panchayat and ward camps notified by the state.",
+    "gruha-lakshmi-karnataka": "Enrolment is open all year at Grama One, Karnataka One and Bangalore One centres.",
+    "biju-swasthya-kalyan-odisha": "No application window — present your BSKY or ration card at an empanelled hospital whenever treatment is needed.",
+}
+
 MASTER_DOCUMENTS_DATA = [
     {
         "id": "aadhaar",
@@ -2104,10 +2233,25 @@ async def seed_database():
     print("Connecting to MongoDB...")
     # Seed schemes
     await db.schemes.delete_many({})
+    dated = 0
     for s in SCHEMES_DATA:
-        scheme_obj = Scheme(**s)
-        await db.schemes.insert_one(scheme_obj.model_dump())
+        # Attach the real cut-off window for this scheme; anything not explicitly
+        # dated is genuinely open all year and gets an honest ROLLING label.
+        deadline = SCHEME_DEADLINES.get(s["id"])
+        if deadline is None:
+            deadline = {
+                "window_type": "ROLLING",
+                "note": ROLLING_DEADLINE_NOTES.get(
+                    s["id"],
+                    "Applications are accepted throughout the year — there is no annual cut-off date.",
+                ),
+            }
+        else:
+            dated += 1
+        scheme_obj = Scheme(**{**s, "deadline": deadline})
+        await db.schemes.insert_one(scheme_obj.model_dump(exclude={"deadline_status"}))
     print(f"Successfully seeded {len(SCHEMES_DATA)} government schemes!")
+    print(f"  -> {dated} with real annual/seasonal/event cut-offs, {len(SCHEMES_DATA) - dated} open all year")
     
     # Seed master documents
     await db.master_documents.delete_many({})

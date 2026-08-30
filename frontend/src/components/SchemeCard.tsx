@@ -1,4 +1,14 @@
-import { ArrowUpRight, CheckCircle2, AlertTriangle, XCircle, Landmark, MapPin } from "lucide-react";
+import {
+  ArrowUpRight,
+  CheckCircle2,
+  AlertTriangle,
+  XCircle,
+  Landmark,
+  MapPin,
+  CalendarClock,
+  CalendarCheck,
+  Hourglass,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -34,6 +44,32 @@ const STATUS_META: Record<
   },
 };
 
+const DEADLINE_META: Record<
+  string,
+  { className: string; Icon: typeof CalendarClock }
+> = {
+  CLOSING_CRITICAL: {
+    className: "border-destructive/40 bg-destructive/10 text-destructive",
+    Icon: CalendarClock,
+  },
+  CLOSING_SOON: {
+    className: "border-[#D97706]/40 bg-[#D97706]/10 text-[#B45309]",
+    Icon: CalendarClock,
+  },
+  OPEN: {
+    className: "border-border bg-secondary text-muted-foreground",
+    Icon: CalendarCheck,
+  },
+  ROLLING: {
+    className: "border-border bg-secondary text-muted-foreground",
+    Icon: CalendarCheck,
+  },
+  EVENT_BASED: {
+    className: "border-border bg-secondary text-muted-foreground",
+    Icon: Hourglass,
+  },
+};
+
 export default function SchemeCard({
   scheme,
   result,
@@ -45,6 +81,12 @@ export default function SchemeCard({
   const status = result?.status ?? "ELIGIBLE";
   const meta = STATUS_META[status] ?? STATUS_META.ELIGIBLE;
   const StatusIcon = meta.Icon;
+
+  const deadline = scheme.deadline_status;
+  const deadlineMeta = deadline
+    ? (DEADLINE_META[deadline.urgency] ?? DEADLINE_META.OPEN)
+    : null;
+  const DeadlineIcon = deadlineMeta?.Icon;
 
   return (
     <article
@@ -120,6 +162,31 @@ export default function SchemeCard({
           {scheme.sector}
         </Badge>
       </div>
+
+      {/* Application cut-off */}
+      {deadline && deadlineMeta && DeadlineIcon && (
+        <div
+          className={`mt-4 rounded-lg border px-3 py-2.5 ${deadlineMeta.className}`}
+          data-testid={`scheme-deadline-${scheme.id}`}
+        >
+          <p className="flex items-center gap-1.5 text-xs font-bold">
+            <DeadlineIcon className="size-3.5 shrink-0" />
+            <span data-testid={`scheme-deadline-headline-${scheme.id}`}>
+              {deadline.headline}
+            </span>
+            {deadline.urgency === "CLOSING_CRITICAL" && (
+              <span className="ml-1 rounded-full bg-destructive px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wide text-white">
+                Urgent
+              </span>
+            )}
+          </p>
+          {deadline.next_cutoff_label && (
+            <p className="mt-1 text-[11px] leading-snug opacity-90">
+              {deadline.next_cutoff_label}
+            </p>
+          )}
+        </div>
+      )}
 
       {result && result.missing_criteria.length > 0 && (
         <p

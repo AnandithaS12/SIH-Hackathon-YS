@@ -38,6 +38,7 @@ import AppHeader from "@/components/AppHeader";
 import YojanaSahayakChat from "@/components/YojanaSahayakChat";
 import SchemeCard from "@/components/SchemeCard";
 import SchemeDetailDialog from "@/components/SchemeDetailDialog";
+import DeadlineAlertBanner from "@/components/DeadlineAlertBanner";
 import { useEvaluation, useOwnedDocuments } from "@/lib/citizenStore";
 import type {
   DocumentReadinessResponse,
@@ -76,6 +77,7 @@ export default function Results() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [compareIds, setCompareIds] = useState<string[]>([]);
   const [comparison, setComparison] = useState<SchemeComparisonResponse | null>(null);
+  const [onlyClosingSoon, setOnlyClosingSoon] = useState(false);
 
   const { data: schemes, isError: schemesError } = useQuery({
     queryKey: ["schemes"],
@@ -124,6 +126,7 @@ export default function Results() {
       if (sector !== "All" && s.sector !== sector) return false;
       if (govLevel === "central" && !s.is_central) return false;
       if (govLevel === "state" && s.is_central) return false;
+      if (onlyClosingSoon && !s.deadline_status?.is_urgent) return false;
 
       if (search.trim()) {
         const q = search.toLowerCase();
@@ -139,7 +142,7 @@ export default function Results() {
       if (sb !== sa) return sb - sa;
       return Number(b.featured) - Number(a.featured);
     });
-  }, [schemes, eligibilityMap, evaluation, statusFilter, sector, govLevel, search]);
+  }, [schemes, eligibilityMap, evaluation, statusFilter, sector, govLevel, search, onlyClosingSoon]);
 
   function toggleCompare(id: string) {
     setCompareIds((prev) => {
@@ -277,8 +280,25 @@ export default function Results() {
           </section>
         )}
 
-        <Tabs defaultValue="schemes" className="mt-10">
-          <TabsList variant="line" className="w-full justify-start overflow-x-auto">
+        {/* Closing-soon warning for the citizen's matched schemes */}
+        <DeadlineAlertBanner
+          schemeIds={
+            evaluation
+              ? Object.values(eligibilityMap)
+                  .filter((r) => r.status === "ELIGIBLE" || r.status === "PARTIALLY_ELIGIBLE")
+                  .map((r) => r.scheme_id)
+              : undefined
+          }
+          onOpenScheme={(schemeId) => {
+            const found = (schemes ?? []).find((s) => s.id === schemeId);
+            if (found) {
+              setActiveScheme(found);
+              setDialogOpen(true);
+            }
+          }}
+        />
+
+        <Tabs defaultValue="schemes" className="mt-10">          <TabsList variant="line" className="w-full justify-start overflow-x-auto">
             <TabsTrigger value="schemes" data-testid="tab-schemes">
               Schemes for me
             </TabsTrigger>
@@ -358,13 +378,24 @@ export default function Results() {
               </div>
 
               <p
-                className="mt-3 flex items-center gap-2 text-xs text-muted-foreground"
+                className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted-foreground"
                 data-testid="scheme-result-count"
               >
-                <Filter className="size-3.5" />
-                Showing {visibleSchemes.length} scheme
-                {visibleSchemes.length === 1 ? "" : "s"}
-                {evaluation ? " matched against your profile" : " from the national database"}
+                <span className="inline-flex items-center gap-2">
+                  <Filter className="size-3.5" />
+                  Showing {visibleSchemes.length} scheme
+                  {visibleSchemes.length === 1 ? "" : "s"}
+                  {evaluation ? " matched against your profile" : " from the national database"}
+                </span>
+
+                <label className="inline-flex cursor-pointer items-center gap-2 font-semibold text-foreground">
+                  <Checkbox
+                    checked={onlyClosingSoon}
+                    onCheckedChange={(c) => setOnlyClosingSoon(Boolean(c))}
+                    data-testid="closing-soon-filter-checkbox"
+                  />
+                  Closing within 30 days only
+                </label>
               </p>
             </div>
 

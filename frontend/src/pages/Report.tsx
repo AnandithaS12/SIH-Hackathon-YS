@@ -166,6 +166,12 @@ export default function Report() {
                         {s.helpline ? ` · Helpline: ${s.helpline}` : ""}
                       </p>
                       <p className="mt-1.5 text-xs text-muted-foreground">
+                        Cut-off: {s.deadline_status?.headline ?? "Open all year"}
+                        {s.deadline_status?.next_cutoff_date
+                          ? ` (${new Date(`${s.deadline_status.next_cutoff_date}T00:00:00`).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })})`
+                          : ""}
+                      </p>
+                      <p className="mt-1.5 text-xs text-muted-foreground">
                         Documents:{" "}
                         {s.required_documents
                           .filter((d) => d.mandatory)

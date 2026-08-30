@@ -2,6 +2,8 @@ from fastapi import APIRouter, HTTPException, Query
 from typing import List, Optional, Dict, Any
 from lib.db import db
 from models.scheme import Scheme, SchemeComparisonRequest, SchemeComparisonResponse
+from lib.deadlines import attach_deadline_status
+from lib.dates import today_iso
 
 router = APIRouter(prefix="/schemes", tags=["schemes"])
 
@@ -14,6 +16,7 @@ async def list_schemes(
     benefit_type: Optional[str] = None,
     category: Optional[str] = None,
     occupation: Optional[str] = None,
+    closing_soon: Optional[bool] = None,
     limit: int = Query(default=100, ge=1, le=200)
 ):
     query: Dict[str, Any] = {}
@@ -39,7 +42,7 @@ async def list_schemes(
     results: List[Scheme] = []
     for doc in schemes_docs:
         doc.pop("_id", None)
-        scheme_obj = Scheme(**doc)
+        scheme_obj = attach_deadline_status(Scheme(**doc))
         
         # In-memory search filtering if query provided
         if search:
@@ -47,6 +50,9 @@ async def list_schemes(
             text_corpus = f"{scheme_obj.title} {scheme_obj.short_name} {scheme_obj.description} {scheme_obj.ministry} {' '.join(scheme_obj.tags)}".lower()
             if s_low not in text_corpus:
                 continue
+
+        if closing_soon and not (scheme_obj.deadline_status and scheme_obj.deadline_status.is_urgent):
+            continue
                 
         results.append(scheme_obj)
         
@@ -84,13 +90,58 @@ async def get_stats_overview():
         "sectors_breakdown": {item["_id"]: item["count"] for item in sector_counts if item["_id"]}
     }
 
+@router.get("/deadlines/upcoming")
+async def get_upcoming_deadlines(
+    scheme_ids: Optional[str] = Query(default=None, description="Comma-separated scheme ids to restrict to"),
+    within_days: int = Query(default=30, ge=1, le=365)
+):
+    """Schemes with a cut-off inside `within_days`, soonest first.
+
+    Dates are resolved against the IST server clock, so the warning is identical
+    for every citizen regardless of their device clock.
+    """
+    query: Dict[str, Any] = {}
+    if scheme_ids:
+        wanted = [s.strip() for s in scheme_ids.split(",") if s.strip()]
+        if wanted:
+            query["id"] = {"$in": wanted}
+
+    docs = await db.schemes.find(query).to_list(500)
+    urgent = []
+    for d in docs:
+        d.pop("_id", None)
+        s = attach_deadline_status(Scheme(**d))
+        st = s.deadline_status
+        if st and st.days_remaining is not None and st.days_remaining <= within_days:
+            urgent.append({
+                "scheme_id": s.id,
+                "short_name": s.short_name,
+                "title": s.title,
+                "sector": s.sector,
+                "official_portal_url": s.official_portal_url,
+                "urgency": st.urgency,
+                "headline": st.headline,
+                "detail": st.detail,
+                "next_cutoff_date": st.next_cutoff_date,
+                "next_cutoff_label": st.next_cutoff_label,
+                "days_remaining": st.days_remaining,
+            })
+
+    urgent.sort(key=lambda item: item["days_remaining"])
+    return {
+        "today": today_iso("Asia/Kolkata"),
+        "within_days": within_days,
+        "count": len(urgent),
+        "deadlines": urgent,
+    }
+
 @router.get("/{id}", response_model=Scheme)
 async def get_scheme_by_id(id: str):
     doc = await db.schemes.find_one({"id": id})
     if not doc:
         raise HTTPException(status_code=404, detail="Scheme not found")
     doc.pop("_id", None)
-    return Scheme(**doc)
+    return attach_deadline_status(Scheme(**doc))
 
 @router.post("/compare", response_model=SchemeComparisonResponse)
 async def compare_schemes(payload: SchemeComparisonRequest):
@@ -101,7 +152,7 @@ async def compare_schemes(payload: SchemeComparisonRequest):
     schemes: List[Scheme] = []
     for d in docs:
         d.pop("_id", None)
-        schemes.append(Scheme(**d))
+        schemes.append(attach_deadline_status(Scheme(**d)))
         
     attributes = [
         {
@@ -141,6 +192,14 @@ async def compare_schemes(payload: SchemeComparisonRequest):
             "key": "application_mode",
             "label": "Application Channel",
             "values": {s.id: s.application_mode for s in schemes}
+        },
+        {
+            "key": "deadline",
+            "label": "Application Cut-off",
+            "values": {
+                s.id: (s.deadline_status.headline if s.deadline_status else "Open all year")
+                for s in schemes
+            }
         },
         {
             "key": "official_portal_url",

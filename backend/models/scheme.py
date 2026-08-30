@@ -35,6 +35,33 @@ class EligibilityRules(BaseModel):
     student_levels: Optional[List[str]] = None
     state_restriction: Optional[List[str]] = None # None or ["All"] means national, otherwise specific states
 
+class SchemeCutoffDate(BaseModel):
+    """One recurring annual cut-off, e.g. Kharif crop insurance closing on 31 July."""
+    label: str          # e.g. "Kharif season enrolment"
+    month: int          # 1-12
+    day: int            # 1-31
+
+class SchemeDeadline(BaseModel):
+    # ROLLING       -> genuinely open all year (no fake date shown)
+    # ANNUAL        -> one recurring cut-off per year
+    # SEASONAL      -> two or more recurring cut-offs per year
+    # EVENT_BASED   -> clock starts from a personal event (birth, pregnancy, admission)
+    window_type: str = "ROLLING"
+    cutoff_dates: List[SchemeCutoffDate] = Field(default_factory=list)
+    note: Optional[str] = None          # shown for ROLLING / EVENT_BASED
+    source_note: Optional[str] = None   # where the date comes from
+
+class DeadlineStatus(BaseModel):
+    """Computed server-side against the IST clock — never derived in the browser."""
+    window_type: str
+    urgency: str                # ROLLING | EVENT_BASED | OPEN | CLOSING_SOON | CLOSING_CRITICAL
+    headline: str               # short label for the badge
+    detail: str                 # full sentence for cards / banner
+    next_cutoff_date: Optional[str] = None   # YYYY-MM-DD
+    next_cutoff_label: Optional[str] = None
+    days_remaining: Optional[int] = None
+    is_urgent: bool = False
+
 class Scheme(BaseModel):
     id: str
     title: str
@@ -60,6 +87,9 @@ class Scheme(BaseModel):
     faq: List[SchemeFAQ] = Field(default_factory=list)
     tags: List[str] = Field(default_factory=list)
     featured: bool = False
+    deadline: SchemeDeadline = Field(default_factory=SchemeDeadline)
+    # Populated by the API layer on every read; not stored in Mongo.
+    deadline_status: Optional[DeadlineStatus] = None
 
 class SchemeFilterParams(BaseModel):
     search: Optional[str] = None

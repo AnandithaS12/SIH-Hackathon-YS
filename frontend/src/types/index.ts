@@ -39,6 +39,51 @@ export interface EligibilityRules {
   state_restriction?: string[] | null;
 }
 
+export interface SchemeCutoffDate {
+  label: string;
+  month: number;
+  day: number;
+}
+
+export interface SchemeDeadline {
+  window_type: string;
+  cutoff_dates: SchemeCutoffDate[];
+  note?: string | null;
+  source_note?: string | null;
+}
+
+export interface DeadlineStatus {
+  window_type: string;
+  urgency: "ROLLING" | "EVENT_BASED" | "OPEN" | "CLOSING_SOON" | "CLOSING_CRITICAL";
+  headline: string;
+  detail: string;
+  next_cutoff_date?: string | null;
+  next_cutoff_label?: string | null;
+  days_remaining?: number | null;
+  is_urgent: boolean;
+}
+
+export interface UpcomingDeadline {
+  scheme_id: string;
+  short_name: string;
+  title: string;
+  sector: string;
+  official_portal_url: string;
+  urgency: string;
+  headline: string;
+  detail: string;
+  next_cutoff_date: string;
+  next_cutoff_label: string;
+  days_remaining: number;
+}
+
+export interface UpcomingDeadlinesResponse {
+  today: string;
+  within_days: number;
+  count: number;
+  deadlines: UpcomingDeadline[];
+}
+
 export interface Scheme {
   id: string;
   title: string;
@@ -64,6 +109,8 @@ export interface Scheme {
   faq: SchemeFAQ[];
   tags: string[];
   featured: boolean;
+  deadline: SchemeDeadline;
+  deadline_status?: DeadlineStatus | null;
 }
 
 export interface CitizenProfile {
