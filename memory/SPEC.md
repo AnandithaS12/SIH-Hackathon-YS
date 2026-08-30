@@ -62,6 +62,29 @@ languages).
 5. Yojana Sahayak floating chat on every page; language chosen in the header switcher
    (`yojana-setu:language`, default `hi`).
 
+## Voice (frontend-only, no backend/API cost)
+`frontend/src/lib/speech.ts` — browser Web Speech API, no keys, no uploads.
+- `useSpeechRecognition(lang)` — mic button in the chat composer. Continuous + interim results, so a
+  live transcript strip shows words as the citizen speaks and fills the textarea, which stays
+  editable before sending. Mic auto-stops on send/panel close. Permission-denied, no-speech and
+  unsupported-browser cases each render an inline dismissible message (never a crash).
+- `useSpeechSynthesis(lang)` — "Listen · <native>" button under every completed assistant reply.
+  Playback is explicit (tap to start, tap again to stop); nothing ever auto-speaks. Markdown is
+  stripped before speaking, and the closest matching voice is picked (exact locale → same language →
+  any `-IN` voice).
+- `SPEECH_LOCALES` maps all 23 app language codes to BCP-47 locales (hi-IN, bn-IN, ta-IN, te-IN,
+  ml-IN, kn-IN, gu-IN, pa-IN, or-IN, ur-IN, as-IN, mr-IN, ne-NP…). Languages without a dedicated
+  browser voice fall back to the closest Indian locale (e.g. Maithili/Dogri/Bodo/Sanskrit → hi-IN,
+  Konkani → mr-IN, Manipuri → bn-IN, Kashmiri → ur-IN).
+- Feature-detected: if the browser lacks SpeechRecognition (e.g. Firefox) the mic button is simply
+  not rendered and typing works unchanged.
+
+## Chat reply formatting
+`frontend/src/components/ChatMarkdown.tsx` — dependency-free renderer for the model's light
+markdown: `**bold**`, `*`/`-`/`•` bullets, numbered lists, `#` headings, bare URLs and
+`[label](href)` links (rendered as tappable orange links). Prevents raw asterisks/brackets from
+leaking into replies. Everything stays React nodes — no HTML injection.
+
 ## Auth
 None. No login, no accounts, no credentials. All citizen data is held in browser localStorage only.
 
