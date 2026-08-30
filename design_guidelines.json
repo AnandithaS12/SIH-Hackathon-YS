@@ -1,0 +1,115 @@
+{
+  "project_name": "Yojana Setu",
+  "theme_strategy": "Light Theme Default (To ensure maximum readability for all age groups and rural demographics, especially when reading long eligibility criteria or localized text).",
+  "typography": {
+    "heading_font": "Manrope",
+    "body_font": "IBM Plex Sans",
+    "rules": [
+      "No generic sans-serif like Inter for headings.",
+      "Headings (Size > 32px) must use tracking-tight.",
+      "Variable weights: Use font-light or font-black for tension and contrast.",
+      "Line height: leading-none for headers, leading-relaxed for body.",
+      "Ensure IBM Plex Sans is loaded properly as it offers excellent support for Devnagari and other Indian scripts."
+    ]
+  },
+  "colors": {
+    "archetype": "ORGANIC & EARTHY (Trust, Growth, Calm) blended with approachable high-contrast utility.",
+    "palette": {
+      "base": "#F8FAFC",
+      "surface": "#FFFFFF",
+      "primary": "#1E3A8A",
+      "primary_hover": "#1E40AF",
+      "accent": "#EA580C",
+      "accent_hover": "#C2410C",
+      "success": "#059669",
+      "text_main": "#1C1917",
+      "text_muted": "#57534E",
+      "border": "#E7E5E4"
+    },
+    "rules": [
+      "Never use pure black or gray; always tint grays with a hint of warm stone or cool blue.",
+      "Minimum 4.5:1 contrast for text. APCA standard applies.",
+      "Hover states must be explicitly defined for text and background.",
+      "Use Saffron Orange (#EA580C) strictly for active states, 'Apply Now' CTAs, and progress markers to drive attention.",
+      "Use Emerald Green (#059669) for 'Eligible' badges and success states."
+    ]
+  },
+  "visual_enhancers": {
+    "surfaces": "Use Solid Backgrounds with subtle borders instead of Glassmorphism. Glassmorphism can feel alienating or visually confusing for rural/elderly demographics.",
+    "borders": "1px solid borders (#E7E5E4) on cards, with soft diffuse shadow (shadow-sm) on hover.",
+    "shapes": "Slightly rounded corners (rounded-xl for cards, rounded-full for pill buttons)."
+  },
+  "components": {
+    "forms": "Use Shadcn Form, Input, Select, Checkbox. All inputs must be large and legible (min 44px height for touch targets).",
+    "modals": "Use Shadcn Dialog for the Scheme Detail views to keep users in context without full page reloads.",
+    "tabs": "Use Shadcn Tabs for switching between 'Schemes List', 'Document Locker', and 'Comparison'.",
+    "progress": "Use Shadcn Progress for the Questionnaire completion status.",
+    "toast": "Use Sonner for toast notifications (e.g., 'Document saved to locker')."
+  },
+  "layouts": {
+    "general": "Generous Spacing Philosophy. p-6 or p-8 inside cards. Wide gaps.",
+    "grid": "Bento Grid protocol for desktop dashboards (grid-cols-1 md:grid-cols-3 lg:grid-cols-4). Strict grid hierarchy, dense and compact spacing.",
+    "navigation": "Solid background header with a hard bottom border. Never transparent over content. Must include Logo and Language Switcher prominently.",
+    "mobile": "Mobile-first approach. Cards stack vertically. Bottom sticky navigation for key actions (Chatbot).",
+    "chatbot": "Floating action button in the bottom right, expanding into a conversational interface card. Keep it accessible and prominent."
+  },
+  "motion": {
+    "hover": "Slight lift (-translate-y-1) and shadow increase on scheme cards.",
+    "transitions": "Use specific properties (transition-transform, transition-opacity, transition-colors), NEVER 'transition-all'.",
+    "entrance": "Staggered fade-in for lists of schemes."
+  },
+  "accessibility": {
+    "testing": "All interactive and key informational elements MUST include a `data-testid` attribute (e.g., `data-testid='apply-scheme-btn'`).",
+    "contrast": "Must meet APCA standards.",
+    "multilingual": "UI must accommodate varying text lengths for 22 vernacular languages. Avoid fixed heights on text containers."
+  },
+  "media": {
+    "icons": "Use 'lucide-react' for clean, universally understood interface icons.",
+    "images": {
+      "logo": {
+        "url": "https://customer-assets-eiarnc6j.emergentagent.net/job_e43c439c-0a56-49ac-ad23-99fa1ca30ab5/artifacts/2fvf23e5_image.png",
+        "description": "Yojana Setu Official Logo"
+      },
+      "hero_citizen": {
+        "url": "https://images.unsplash.com/photo-1632414237690-7713a79fe9d3?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2NzR8MHwxfHNlYXJjaHwyfHxpbmRpYW4lMjBydXJhbCUyMHBlb3BsZSUyMHNtaWxpbmd8ZW58MHx8fHwxNzg4MDY0Mjc3fDA&ixlib=rb-4.1.0&q=85",
+        "description": "Smiling rural Indian citizen (for general welfare schemes)"
+      },
+      "education_student": {
+        "url": "https://images.unsplash.com/photo-1594709276182-fbb16f52de74?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA2MjJ8MHwxfHNlYXJjaHwxfHxpbmRpYW4lMjBzdHVkZW50cyUyMGRpZ2l0YWx8ZW58MHx8fHwxNzg4MDY0Mjc3fDA&ixlib=rb-4.1.0&q=85",
+        "description": "Indian student (for education schemes)"
+      },
+      "healthcare_worker": {
+        "url": "https://images.unsplash.com/photo-1741707039536-113e200f9e0d?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzOTB8MHwxfHNlYXJjaHwxfHxpbmRpYW4lMjBoZWFsdGhjYXJlJTIwd29ya2VyfGVufDB8fHx8MTc4ODA2NDI3N3ww&ixlib=rb-4.1.0&q=85",
+        "description": "Smiling Indian healthcare worker (for health schemes)"
+      }
+    }
+  },
+  "instructions_to_main_agent": [
+    "Build the application using standard React (.js/.jsx) with Tailwind CSS.",
+    "Implement the Yojana Sahayak chatbot as a persistent, floating UI element that can stream AI responses.",
+    "The Document Readiness Locker should visually map to required documents for eligible schemes, showing a clear 'Ready' vs 'Missing' state.",
+    "Ensure the printable Eligibility Report has a clean, print-friendly layout (using print: Tailwind modifiers).",
+    "Never use placeholder image URLs like via.placeholder.com. Use the provided Unsplash URLs.",
+    "Focus on responsive design, ensuring tables and comparison tools are usable on small mobile screens (horizontal scroll if necessary).",
+    "Include standard Shadcn UI installations. Do not use generic native HTML tags for interactive elements."
+  ],
+  "universal_guidelines_for_main_agent": [
+    "You tend to converge toward generic, 'on distribution' outputs. In frontend design, this creates what users call the 'AI slop' aesthetic. Avoid this: make creative, distinctive frontends that surprise and delight.",
+    "Dark colors look good when used independently without gradients. DO NOT use dark colors as gradients",
+    "Don't make generic centered layouts, simplistic gradients, and uniform styling.",
+    "Create depth through layered design elements with z-index hierarchy",
+    "Use glass-morphism effects with backdrop filters (12-24px blur) where appropriate (though for this app, prefer solid surfaces for accessibility).",
+    "You MUST NOT apply universal transition. Eg: `transition: all`. This results in breaking transforms. Always add transitions for specific interactive elements like button, input excluding transforms",
+    "You MUST NOT center align the app container, ie do not add `.App { text-align: center; }` in the css file. This disrupts the human natural reading flow of text",
+    "Always use modern button styles like pill-shaped, or sharp button with interaction animations & color relevant to the app style",
+    "NEVER: use AI assistant Emoji characters like 🤖🧠💭💡🔮🎯 etc for icons.",
+    "Every interaction needs micro-animations - hover states, transitions, parallax effects, and entrance animations. Static = dead.",
+    "Use 2-3x more spacing than feels comfortable. Cramped designs look cheap.",
+    "Subtle grain textures, noise overlays, custom cursors, selection states, and loading animations: separates good from extraordinary.",
+    "Main agent relies on these image URLs. Missing categories (especially sponsor logos) = main agent will use placeholder text which is FORBIDDEN",
+    "Prioritize using pre-existing components from src/components/ui when applicable",
+    "Create new components that match the style and conventions of existing components when needed",
+    "Examine existing components to understand the project's component patterns before creating new ones",
+    "Use `sonner` for toasts. Sonner component are located in `/app/src/components/ui/sonner.tsx`"
+  ]
+}
